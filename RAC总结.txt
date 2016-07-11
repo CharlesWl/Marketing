@@ -1,0 +1,56 @@
+官方文档：
+https://github.com/ReactiveCocoa/ReactiveCocoa/tree/master/Documentation/Legacy
+
+ReactiveCocoa(简称RAC):
+定义：函数响应式编程（FRP）框架
+响应式编程：不需要考虑调用顺序，只需要知道考虑结果，类似于蝴蝶效应，产生一个事件，会影响很多东西，这些事件像流一样的传播出去，然后影响结果。参考KVO
+作用：统一事件处理（kvo,delegate,notification——>信号），代码集中；可先绑定响应关系，事件产生和事件处理依赖小，解耦
+
+信号（RACSignal）：
+1.定义：一个事件流，传递三种事件：error,complete，next，其中next可以携带数据，也可以是nil
+2.创建：普通创建和便捷创建（error empty return ）
+3.生命周期：发生errror或complete事件时，才会释放，所以一定要有sendComplete或sendError。
+4.订阅：被订阅时才会触发信号，开始产生事件。 订阅操作会生成RACDisposable对象，可以用于取消订阅或者清理资源。
+
+信号的操作：
+https://github.com/ReactiveCocoa/ReactiveCocoa/blob/master/Documentation/Legacy/BasicOperators.md
+1.map：用来转换next携带数据的类型
+2.filter：用来过滤next事件
+3.merge:合并多个子信号，效果就是任何一个子信号的next都会作为该信号的next，任何子信号的error都会作为该信号的error,所有子信号都complete，该信号才会complete
+4.combineLatest: 将多个子信号最新的next数据进行组合（一定要所有子信号都有值），产生该信号的一个next事件，它携带数据的类型为RACTuple,所以一般配合reduce来解析里面的所有数据类型。   注意不要指望仅在reduce里面做处理，因为如果不订阅该信号（冷信号），是根本走不到reduce里的~
+5.delay和Interval：可以轻松实现定时效果
+6.then：上一个信号完成后，才会订阅下一个信号
+7.takeUtil：当某个信号发生next或complete时，当前信号才会complete。用来防止重复绑定
+8.doNext,doError,doComplete：附加操作，不影响原有的事件传递，我经常用它来抽离日志
+9.deliverOn：会影响订阅操作的执行线程，而不影响附加操作的线程；不要使用subscribeOn
+10:skip,take：跳过几次next事件，只取几次next事件
+11.not: 对next为NSNumber类型的信号做逻辑转换
+12.flattenMap:可以理解为用来串联（顺序执行）多个异步操作（子信号），flatten实现merge操作,map用于转换Next数据
+
+命令(RACCommand):
+1.用途：处理事件，触发一个信号。我们常用它用作网络请求或UI响应，主要因为它有执行的状态。
+2.executing:表示是否正在执行，默认为NO，开始执行为YES，执行结束为NO。
+3.executionSignals:是执行信号的信号，我们一般取里面的执行信号来订阅，因为它与我们创建Command时所创建的信号有对应关系（不是同一个对象）
+4.errors:执行过程中的错误事件流
+5.execute方法：可以传递参数，返回一个执行信号
+7.注意绑定的RACCommand和执行的RACCommand应该是一个；注意环引用
+
+常用的宏：
+1.@weakify  @strongify ：太常用了，不解释。。。
+2.RACObserve ： 监听某个对象的某个属性,返回的是信号;产生的信号肯定有next值，即所观察属性的初始值；观察一个数组时，数组中添加一个元素不会触发新的next事件；
+3.RAC：用于给某个对象的某个属性绑定
+4.RACTuplePack,RACTupleUnpack:方便的创建和解析RACTuple对象，tuple对象里可以有nil
+
+其他：
+1.若需要所有信号都Complete才能进行下一步时，merge和combineLatest都行
+2.RACSubject：信号提供者，自己可以充当信号，又能发送信号，用法跟通知很相似
+
+RAC提供的常用信号：
+1.UITextFiled.rac_textSignal
+2.UIButton.rac_command
+3.[UIControl rac_signalForControlEvents:]
+4.UIAlertView.rac_buttonClickedSignal
+5.[[NSNotificationCenter defaultCenter]rac_addObserverForName: object:]
+6.UITableViewCell.rac_prepareForReuseSignal
+7.[NSObject rac_liftSelector: withSignals:]
+8.[NSObject rac_signalForSelector:] 或 [NSObject rac_signalForSelector: fromProtocol:]
